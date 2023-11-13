@@ -1,0 +1,102 @@
+"""Directed graph in degree distribution methods."""
+
+EX_GRAPH0 = {0:set([1, 2]), 1: set([]), 2: set([])}
+EX_GRAPH1 = {0:set([1, 4, 5]), 1: set([2, 6]), 2: set([3]),
+            3:set([0]), 4: set([1]), 5: set([2]), 6: set([])}
+EX_GRAPH2 = {0:set([1, 4, 5]), 1: set([2, 6]), 2: set([3, 7]),
+            3:set([7]), 4: set([1]), 5: set([2]), 6: set([]), 7: set([3]),
+            8: set([1, 2]), 9: set([0, 4, 5, 6, 7, 3])}
+
+def make_complete_graph(num_nodes):
+    """Creates a complete graph with all possible nodes. No self loops."""
+    
+    if num_nodes == 0:
+        return {}
+    elif num_nodes == 1:
+        return {0: set([])}
+    else:
+        graph = {}
+        adj_list = range(num_nodes)
+        for node in range(num_nodes):
+            adj_list_sub = list(adj_list)
+            adj_list_sub.remove(node) 
+            graph[node] = set(adj_list_sub)
+        
+        return graph
+
+def compute_in_degrees(digraph):
+    """Computes the number of in degrees to a node in a directed graph."""
+    
+    if len(digraph) == 0:
+        return {}
+    elif len(digraph) == 1:
+        return {0: 0}
+    else:
+        graph_num_edges = {key: 0 for key in digraph.keys()}
+        for node in digraph:
+            for edge in digraph[node]:
+                graph_num_edges[edge] += 1
+        
+        return graph_num_edges
+    
+def in_degree_distribution(digraph):
+    """Computes the in degree distribution of a given directed graph."""
+    
+    if len(digraph) == 0:
+        return {}
+    elif len(digraph) == 1:
+        return {0: 1}
+    else:
+        in_degrees = compute_in_degrees(digraph)
+        in_degree_dist = {key: 0 for key in in_degrees.values()}
+        for node in in_degrees.values():
+            if node in in_degree_dist:
+                in_degree_dist[node] += 1
+            else:
+                continue
+        
+        return in_degree_dist
+
+
+def plot_in_deg(graph):
+    graph_in_deg = in_deg.in_degree_distribution(graph)
+    TOTAL_PAPERS = 27770
+    
+    for key, value in graph_in_deg.items():
+        graph[key] = float(value) / TOTAL_PAPERS
+
+    plot = []
+    for key_idx, val_idx in graph_in_deg.items():
+        if key_idx != 0 and val_idx != 0:
+            plot.append((math.log10(key_idx), math.log10(val_idx)))
+ 
+    return plot
+
+simpleplot.plot_scatter("Log-log Normalized In Degrees Distribution", 600, 600, 
+                        "No. of Citations log base 10", "Fraction of citations log base 10", 
+                        [plot_in_deg(citation_graph)], ["log-log in degree distribution normalized"])
+
+
+def ER_Algorithm(nodes, prob):
+    graph_nodes = range(nodes)
+    edges = []
+    
+    for node_i in graph_nodes:
+        for node_j in graph_nodes:
+            if node_i != node_j:
+                a = random.random()
+                if a < prob:
+                    edges.append([node_i, node_j])
+                    
+    graph = {graph_nodes[vals]: set() for vals in range(nodes)}
+    for edge in edges:
+        graph[edge[0]].add(edge[1])
+        graph[edge[1]].add(edge[0])
+        
+    return graph
+
+#print ER_Algorithm(100, 0.5)
+
+simpleplot.plot_scatter("Log-log Normalized In Degrees Distribution", 600, 600, 
+                        "No. of Citations log base 10", "Fraction of citations log base 10", 
+                        [plot_in_deg(ER_Algorithm(5000, 0.5))], ["log-log in degree distribution normalized"])

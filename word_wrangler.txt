@@ -1,0 +1,159 @@
+"""
+Student code for Word Wrangler game
+"""
+
+import urllib2
+import codeskulptor
+import poc_wrangler_provided as provided
+
+WORDFILE = "assets_scrabble_words3.txt"
+
+
+# Functions to manipulate ordered word lists
+
+def remove_duplicates(list1):
+    """
+    Eliminate duplicates in a sorted list.
+
+    Returns a new sorted list with the same elements in list1, but
+    with no duplicates.
+
+    This function can be iterative.
+    """
+    no_dups = []
+    for elem in list1:
+        if elem not in no_dups:
+            no_dups.append(elem)
+            
+    return no_dups
+
+def intersect(list1, list2):
+    """
+    Compute the intersection of two sorted lists.
+
+    Returns a new sorted list containing only elements that are in
+    both list1 and list2.
+
+    This function can be iterative.
+    """
+    common = []
+    for elem in list1:
+        if elem in list2:
+            common.append(elem)
+            
+    return common
+
+# Functions to perform merge sort
+
+def merge(list1, list2):
+    """
+    Merge two sorted lists.
+
+    Returns a new sorted list containing those elements that are in
+    either list1 or list2.
+
+    This function can be iterative.
+    """   
+    final_list = []
+    list_a = list(list1)
+    list_b = list(list2)
+    
+    while (len(list_a) > 0) and (len(list_b) > 0):
+        if list_a[0] < list_b[0]:
+            item = list_a.pop(0)
+            final_list.append(item)
+            
+        else:
+            item = list_b.pop(0)
+            final_list.append(item)
+     
+    if (len(list_a) == 0) and (len(list_b) > 0):
+        for elem in list_b:
+            final_list.append(elem)
+            
+    elif (len(list_b) == 0) and (len(list_a) > 0):
+        for elem in list_a:
+            final_list.append(elem)
+            
+    return final_list
+              
+def merge_sort(list1):
+    """
+    Sort the elements of list1.
+
+    Return a new sorted list with the same elements as list1.
+
+    This function should be recursive.
+    """
+    if len(list1) <= 1:
+        return list1
+    
+    elif len(list1) == 2:
+        if list1[0] > list1[1]:
+            temp = list1[1]
+            list1[1] = list1[0]
+            list1[0] = temp
+        return list1
+    
+    else:
+        mid = len(list1) // 2
+        return merge(merge_sort(list1[:mid]), merge_sort(list1[mid:]))
+
+# Function to generate all strings for the word wrangler game
+
+def gen_all_strings(word):
+    """
+    Generate all strings that can be composed from the letters in word
+    in any order.
+
+    Returns a list of all strings that can be formed from the letters
+    in word.
+
+    This function should be recursive.
+    """
+    if len(word) == 0:
+        return [""]
+    else:
+        first = word[0]
+        answer = []
+        rest = word[1:]
+        rest_strings = gen_all_strings(rest)
+        
+        answer = []
+        for sub_string in rest_strings:
+            for idx in range(len(sub_string)+1):
+                ans = sub_string[:idx] + first + sub_string[idx:]
+                answer.append(ans)
+                
+        return answer + rest_strings
+
+# Function to load words from a file
+
+def load_words(filename):
+    """
+    Load word list from the file named filename.
+
+    Returns a list of strings.
+    """
+    url = codeskulptor.file2url(filename)
+    file1 = urllib2.urlopen(url)
+    
+    diction = file1.read().splitlines()
+
+    return diction
+
+def run():
+    """
+    Run game.
+    """
+    words = load_words(WORDFILE)
+    wrangler = provided.WordWrangler(words, remove_duplicates, 
+                                     intersect, merge_sort, 
+                                     gen_all_strings)
+    provided.run_game(wrangler)
+
+# Uncomment when you are ready to try the game
+run()
+
+    
+    

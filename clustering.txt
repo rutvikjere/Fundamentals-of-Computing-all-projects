@@ -1,0 +1,192 @@
+"""Kmeans and Hierarchical Clustering and its distance functions."""
+
+import alg_cluster as cluster
+
+# Distance functions:
+def slow_closest_pair(cluster_list):
+    """Slow closest pair returns a tuple containing the least euclidean 
+    distance between two cluster objects and the index of them from the 
+    input list. Brute force method."""
+    
+    min_dist = (float('inf'), -1, -1)
+    
+    for idx_u in range(len(cluster_list)):
+        for idx_v in range(idx_u + 1, len(cluster_list)):
+            if idx_u != idx_v:
+                dist = cluster_list[idx_u].distance(cluster_list[idx_v])
+                if dist <= min_dist[0]:
+                    min_dist = (dist, idx_u, idx_v)
+                                    
+    return min_dist
+
+def fast_closest_pair(cluster_list):
+    """Fast closest pair returns a tuple containing the least euclidean 
+    distance between two cluster objects and the index of them from the 
+    input list. Efficient method with a helper funct of closest pair
+    strip and brute force incase the len of the list is <= 3."""
+    
+    list_len = len(cluster_list)    
+    if list_len <= 3:
+        return slow_closest_pair(cluster_list)
+    
+    else:   
+        # middle index in the cluster list
+        mid_idx = list_len / 2  
+        cluster_l = cluster_list[:mid_idx]
+        cluster_r = cluster_list[mid_idx:]
+        min_dist_l = fast_closest_pair(cluster_l)
+        min_dist_r = fast_closest_pair(cluster_r)
+     
+        if min_dist_l[0] < min_dist_r[0]:
+            min_dist = min_dist_l
+        else:
+            min_dist = (min_dist_r[0], min_dist_r[1]+mid_idx,
+                        min_dist_r[2]+mid_idx)
+            
+        # Horizontal center
+        mid = (0.5) * (cluster_list[mid_idx-1].horiz_center() + cluster_list[mid_idx].horiz_center())        
+        min_closest_strip = closest_pair_strip(cluster_list, mid, min_dist[0])
+        
+        if min_dist[0] > min_closest_strip[0]:
+            min_dist = min_closest_strip
+    
+    return min_dist
+
+def closest_pair_strip(cluster_list, horiz_center, half_width):
+    """Returns a tuple with the minimum distance from the strip containig
+    the distance and the pair of cluster objects."""
+
+    cluster_list1 = []
+    for clust in cluster_list:
+        if abs(clust.horiz_center() - horiz_center) <= half_width:
+            cluster_list1.append(clust)
+    
+    cluster_list1.sort(key = lambda cluster: cluster.vert_center())
+    s_len = len(cluster_list1)
+    min_dist = [float('inf'), -1, -1]
+    
+    for idx_u in range(s_len - 1):
+        for idx_v in range(idx_u+1, min(idx_u+4, s_len)):
+            dist = cluster_list1[idx_u].distance(cluster_list1[idx_v])
+            if dist < min_dist[0]:
+                val_u = cluster_list.index(cluster_list1[idx_u])
+                val_v = cluster_list.index(cluster_list1[idx_v])
+                min_dist[0] = dist
+                min_dist[1] = min(val_u, val_v)
+                min_dist[2] = max(val_u, val_v)
+                
+    return tuple(min_dist)
+
+# Clustering:
+def hierarchical_clustering(cluster_list, num_clusters):
+    """Hierarchically clusters a list of objects together by clustering similar
+    counties together. Finally, when the num_clusters in the list is reached,
+    return the list of clusters together. Input to the fast closest pair needs
+    to be sorted by the horizontal center of the clusters."""
+    
+    clusters = list(cluster_list)    
+    clusters.sort(key = lambda cluster: cluster.horiz_center())
+        
+    while len(clusters) > num_clusters:
+        closest_pair = fast_closest_pair(clusters)
+        clusters[closest_pair[1]].merge_clusters(clusters[closest_pair[2]])
+        clusters.remove(clusters[closest_pair[2]])
+        clusters.sort(key = lambda cluster: cluster.horiz_center())
+                
+    return clusters
+
+def kmeans_clustering(cluster_list, num_clusters, num_iterations):
+    """K-means clusters a list of objects together by clustering similar
+    counties together for a given number of iterations. Finally, when the 
+    num_iterations is reached, return the list of clusters together. We initialize
+    the old clusters with the num_clusters most populated counties. We then 
+    initialize a new empty num_clusters and get the shortest distance of the old
+    cluster centers with which we merge with the cluster on the new set. Returns
+    the new cluster set."""
+    
+    clusters = list(cluster_list)
+    clusters.sort(key = lambda cluster: cluster.horiz_center())
+    old_clusters_centers = []
+    
+    # Initializing old clusters using population:
+    old_clusters = list(clusters)
+    old_clusters.sort(key = lambda cluster: cluster.total_population(), 
+                      reverse=True)
+    
+    for clust in range(num_clusters):
+        old_clusters_centers.append(cluster.Cluster(set([]), 
+                                    old_clusters[clust].horiz_center(), 
+                                    old_clusters[clust].vert_center(), 
+                                    old_clusters[clust].total_population(),
+                                    old_clusters[clust].averaged_risk()))
+    
+    for _ in range(num_iterations):
+        #Initialize new K clusters:
+        new_clusters = [cluster.Cluster(set([]), 0, 0, 0, 0) for clust in range(num_clusters)]
+        
+        for iter_j in clusters:
+            shortest_dist = float("inf")
+            center_position = 0
+            
+            for center in old_clusters_centers:
+                dist = iter_j.distance(center)
+                if dist < shortest_dist:
+                    shortest_dist = dist
+                    center_position = old_clusters_centers.index(center)
+                    
+            new_clusters[center_position].merge_clusters(iter_j)
+            
+        old_clusters_centers = new_clusters
+            
+    return new_clusters
+
+# Applications:
+def gen_random_clusters(num_clusters):
+    """Generate num_cluster random clusters with x&y coords between -1 to 
+    1."""
+    
+    cluster_list = [alg_cluster.Cluster(set([]), random.uniform(-1, 1),
+                                    random.uniform(-1, 1), 0, 0) \\
+                    for clust in range(num_clusters)]
+    
+    return cluster_list
+
+def plot_closest_func():
+    """Plot and compare the slow & fast closest pair functions."""
+    
+    slow_times = []
+    fast_times = []
+    #time_in_sec = range(2, 201)
+    
+    for cluster in range(2, 201):  
+        cluster_list = gen_random_clusters(cluster)
+    
+        start_slow = time.time()
+        slow = alg_project3_solution.slow_closest_pair(cluster_list)
+        time_slow = time.time() - start_slow
+    
+        start_fast = time.time()
+        fast = alg_project3_solution.fast_closest_pair(cluster_list)
+        time_fast = time.time() - start_fast
+        
+        slow_times.append((cluster, time_slow))
+        fast_times.append((cluster, time_fast))
+    
+    simpleplot.plot_scatter('Slow vs. Fast Closest Pair in seconds', 400, 300, 
+                            'Number of Clusters', 'Time in seconds',
+                            [slow_times, fast_times], ['Slow Closest Function',
+                                                       'Fast CLosest Function'])
+        
+plot_closest_func()
+
+def compute_distortion(cluster_list, data_table):
+    """Computes the total distortion of a given clustering set. Sum(cluster_error)"""
+    
+    distortion = []
+    
+    for clust in range(len(cluster_list)):
+        distortion.append(cluster_list[clust].cluster_error(data_table))
+        
+    distortion = sum(distortion)
+    
+    return distortion

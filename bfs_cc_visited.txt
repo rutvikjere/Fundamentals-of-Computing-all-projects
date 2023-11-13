@@ -1,0 +1,116 @@
+"""Module 2 - BFS, CC & Largest CC size methods for
+Computer Networks applications."""
+
+import poc_queue, random
+
+def bfs_visited(ugraph, start_node):
+    """Implements breadth first search algorithm to keep
+    track of all the nodes which have been visited."""
+    
+    queue = poc_queue.Queue()
+    visited = [start_node]
+    queue.enqueue(start_node)
+    
+    while queue.__len__() != 0:
+        node = queue.dequeue()
+        for neighbour in ugraph[node]:
+            if neighbour not in visited:
+                visited.append(neighbour)
+                queue.enqueue(neighbour)
+                
+    return set(visited)
+
+def cc_visited(ugraph):
+    """Returns a list of sets of visited nodes and their
+    neighbours."""
+    
+    remaining_nodes = ugraph.keys()
+    cc_list = []
+    
+    while len(remaining_nodes) != 0:
+        rand_node = random.choice(remaining_nodes)
+        visited_bfs = bfs_visited(ugraph, rand_node)
+        if visited_bfs not in cc_list:
+            cc_list.append(visited_bfs)
+        remaining_nodes.remove(rand_node)
+     
+    return cc_list
+
+def largest_cc_size(ugraph):
+    """Returns the node with the most connections."""
+    
+    cc_list = cc_visited(ugraph)
+    
+    largest_cc = 0
+    for component in cc_list:
+        if len(component) > largest_cc:
+            largest_cc = len(component)
+    
+    return largest_cc
+    
+def compute_resilience(ugraph, attack_order):
+    """Removes the nodes and edges in a graph which are under 
+    attack. Returns a list with largest_cc_sizes after each node 
+    removal, with the 0th index being the largest cc size 
+    before treating the graph for attack_order."""
+    
+    largest_cc_post_removal = [largest_cc_size(ugraph)]
+    
+    for attack_node in attack_order:
+        ugraph.pop(attack_node)
+        for node in ugraph:
+            if attack_node in ugraph[node]:
+                ugraph[node].remove(attack_node)
+                
+        largest_cc = largest_cc_size(ugraph)
+        largest_cc_post_removal.append(largest_cc)
+        
+    return largest_cc_post_removal
+
+
+def make_complete_graph(num_nodes, prob):
+    """Creates a complete graph with all possible nodes. 
+    No self loops."""
+    
+    if num_nodes == 0:
+        return {}
+    elif num_nodes == 1:
+        return {0: set([])}
+    else:
+        edges = []
+        for node_i in range(num_nodes):
+            for node_j in range(node_i+1, num_nodes):
+                a = random.random()
+                if a < prob:
+                    edges.append([node_i, node_j])
+        
+        graph = {vals: set() for vals in range(num_nodes)}
+        print "Edges", len(edges)
+        for edge in edges:
+            graph[edge[0]].add(edge[1])
+            graph[edge[1]].add(edge[0])
+        
+        return graph
+    
+def UPA_algo(nodes, m):
+    V = range(nodes)
+    edges = [(i, j) for node_i in V for node_j in V if node_i != node_j]
+    
+    for i in range(m, nodes):
+        upa = UPATrial(m)
+        V_hat = upa.run_trials(m)
+        V.append(i)
+        for new_nodes in V_hat:
+            edges.append((i, new_nodes))
+        
+    graph = {graph_nodes[vals]: set() for vals in range(nodes)}
+    for edge in edges:
+        graph[edge[0]].add(edge[1])
+        
+    return graph
+    
+graph_ER = make_complete_graph(1239, .00395)
+    
+    
+    
+    

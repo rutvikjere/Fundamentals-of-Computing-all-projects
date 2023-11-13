@@ -1,0 +1,38 @@
+"""
+Merge function for 2048 game.
+"""
+
+def merge(line):
+    """
+    Function that merges a single row or column in 2048.
+    """
+    result = [0] * len(line)
+    
+    for line_elem in range(0, len(line)):
+        if line[line_elem] != 0:
+            for result_elem in range(0, len(result)):
+                if result[result_elem] == 0:
+                    result[result_elem] = line[line_elem]
+                    break
+                    
+    merge_result = list(result)
+    result_elem = 0
+    
+    while result_elem < len(result)-1:
+        if result[result_elem] == result[result_elem+1]:
+            merge_result[result_elem] = result[result_elem] * 2
+            merge_result[result_elem+1] = 0
+            result_elem += 2
+        else:
+            result_elem += 1
+                   
+    final_result = [0] * len(merge_result)
+            
+    for elem in range(0, len(merge_result)):
+        if merge_result[elem] != 0:
+            for final_elem in range(0, len(final_result)):
+                if final_result[final_elem] == 0:
+                    final_result[final_elem] = merge_result[elem]
+                    break                    
+                           
+    return final_result

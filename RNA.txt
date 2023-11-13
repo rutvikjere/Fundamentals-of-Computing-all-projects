@@ -1,0 +1,172 @@
+"""Project - 4: Sequence alignment and scoring functions"""
+
+def build_scoring_matrix(alphabet, diag_score, off_diag_score,
+                        das_score):
+    """Builds the scoring matrix of a given sequence by 
+    computing a nested dictionary."""
+    
+    alpha_dash = list(alphabet)
+    alpha_dash.append("-")
+    scoring_matrix_1 = {}
+    
+    for alpha_i in alpha_dash:
+        scoring_matrix_2 = {}
+        for alpha_j in alpha_dash:
+            if (alpha_i is "-") or (alpha_j is "-"):
+                scoring_matrix_2[alpha_j] = das_score
+            
+            elif alpha_i is alpha_j:
+                scoring_matrix_2[alpha_j] = diag_score
+                
+            else:
+                scoring_matrix_2[alpha_j] = off_diag_score
+                        
+        scoring_matrix_1[alpha_i] = scoring_matrix_2
+            
+    return scoring_matrix_1
+
+def compute_alignment_matrix(seq_x, seq_y, scoring_matrix,
+                             global_flag):
+    """Computes the alignment matrix of the sequences x & y."""
+    
+    seq_x_len = len(seq_x)
+    seq_y_len = len(seq_y)
+    
+    alignment_matrix = [[0]*(seq_y_len+1) for _ in range(seq_x_len+1)]
+    
+    for idx_i in range(1, seq_x_len+1):
+        align_score = alignment_matrix[idx_i-1][0] + scoring_matrix[seq_x[idx_i-1]]["-"]
+        if global_flag == False and align_score < 0:
+            align_score = 0
+            
+        alignment_matrix[idx_i][0] = align_score
+            
+    for idx_j in range(1, seq_y_len+1):
+        align_score = alignment_matrix[0][idx_j-1] + scoring_matrix["-"][seq_y[idx_j-1]]
+        if global_flag == False and align_score < 0:
+            align_score = 0
+            
+        alignment_matrix[0][idx_j] = align_score
+
+    for idx_i in range(1, seq_x_len+1):
+        for idx_j in range(1, seq_y_len+1):
+            align_score = max(alignment_matrix[idx_i-1][idx_j-1]+scoring_matrix[seq_x[idx_i-1]][seq_y[idx_j-1]],
+                             alignment_matrix[idx_i-1][idx_j]+scoring_matrix[seq_x[idx_i-1]]["-"],
+                             alignment_matrix[idx_i][idx_j-1]+scoring_matrix["-"][seq_y[idx_j-1]])
+            if global_flag == False and align_score < 0:
+                align_score = 0
+                
+            alignment_matrix[idx_i][idx_j] = align_score
+            
+    return alignment_matrix
+
+def compute_global_alignment(seq_x, seq_y, scoring_matrix, 
+                             alignment_matrix):
+    """Computes the dynamic programming table of  of the sequences x & y."""
+    
+    idx_i = len(seq_x)
+    idx_j = len(seq_y)
+    
+    if idx_i < 1 or idx_j < 1:
+        return (0, seq_x, seq_y)
+    
+    align_x = ""
+    align_y = ""
+    
+    while idx_i != 0 or idx_j != 0:
+        if alignment_matrix[idx_i][idx_j] == alignment_matrix[idx_i-1][idx_j-1] + scoring_matrix[seq_x[idx_i-1]][seq_y[idx_j-1]]:
+            align_x = seq_x[idx_i-1] + align_x
+            align_y = seq_y[idx_j-1] + align_y
+            
+            idx_i -= 1
+            idx_j -= 1
+            
+        else:
+            if alignment_matrix[idx_i][idx_j] == alignment_matrix[idx_i-1][idx_j] + scoring_matrix[seq_x[idx_i-1]]["-"]:
+                align_x = seq_x[idx_i-1] + align_x
+                align_y = "-" + align_y
+            
+                idx_i -= 1
+                
+            else:
+                align_x = "-" + align_x
+                align_y = seq_y[idx_j-1] + align_y
+            
+                idx_j -= 1
+                
+    while idx_i != 0:
+        align_x = seq_x[idx_i-1] + align_x
+        align_y = "-" + align_y
+            
+        idx_i -= 1
+        
+    while idx_i != 0:
+        align_x = "-" + align_x
+        align_y = seq_y[idx_j-1] + align_y
+            
+        idx_j -= 1
+    
+    align_score = compute_alignment_matrix(align_x, align_y, scoring_matrix, True)
+    score = align_score[len(align_x)][len(align_y)]
+    
+    return (score, align_x, align_y)
+
+def compute_local_alignment(seq_x, seq_y, scoring_matrix, 
+                             alignment_matrix):
+    """Computes the dynamic programming table of  of the sequences x & y."""
+    
+    if len(seq_x) <1 and len(seq_y) <1:
+        return (0, seq_x, seq_y)
+
+    align_x = ""
+    align_y = ""
+
+    #obtain max
+    max_value = 0
+    for idx1 in reversed(range (len(alignment_matrix))):
+        for idx2 in reversed(range(len(alignment_matrix[idx1]))):
+            #print idx1, idx2
+            if alignment_matrix[idx1][idx2] > max_value:
+                max_value = alignment_matrix[idx1][idx2]
+                location = (idx1, idx2)
+
+    idx_i = location[0]
+    idx_j = location[1]
+
+    while idx_i !=0 and idx_j !=0:
+        if alignment_matrix[idx_i][idx_j] == alignment_matrix[idx_i-1][idx_j-1]+scoring_matrix[seq_x[idx_i-1]][seq_y[idx_j-1]]:
+            align_x = seq_x[idx_i-1]+align_x
+            align_y = seq_y[idx_j-1]+align_y
+            idx_i -=1
+            idx_j -=1
+        else:
+            if alignment_matrix[idx_i][idx_j] == alignment_matrix[idx_i-1][idx_j]+scoring_matrix[seq_x[idx_i-1]]['-']:
+                align_x = seq_x[idx_i-1]+align_x
+                align_y = '-'+align_y
+                idx_i -=1
+            else:
+                align_x = '-'+align_x
+                align_y = seq_y[idx_j-1]+align_y
+                idx_j -=1
+
+    #print align_x, align_y
+
+    ax_list = list(align_x)
+    ay_list = list(align_y)
+
+    while ax_list[0] == '-' or ay_list[0] == "-":
+        ax_list.pop(0)
+        ay_list.pop(0)
+
+    while ax_list[-1] == '-' or ay_list[-1] == "-":
+        ax_list.pop()
+        ay_list.pop()
+
+    align_x = ''.join(ax_list)
+    align_y = ''.join(ay_list)
+
+    align_matrix_final = compute_alignment_matrix(align_x, align_y, scoring_matrix, False)
+
+    return (align_matrix_final[len(align_x)][len(align_y)], align_x, align_y)
+
+
